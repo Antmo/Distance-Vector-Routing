@@ -12,10 +12,10 @@ public class GuiTextArea {
 	JFrame frame = new JFrame(title);
 	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	
-	myArea = new JTextArea(20, 40);
+	myArea = new JTextArea(40, 50);
 
 	/* Testing some fonts*/
-	myArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+	myArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
 
 	myArea.setEditable(false);
 	JScrollPane scrollPane = 
