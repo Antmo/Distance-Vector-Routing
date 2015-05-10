@@ -170,78 +170,30 @@ public class RouterNode {
     /* Returns the ID of the router to where we should send in order to reach dest */
     private void find_min_path(int dest, int source, int[] mincosts)
     {
-	/* if we got the packet from source AND mincosts[dest] is not INFINITY there HAS to be a cost[dest]
-	   != INFINTY via minroute[source] = mincosts[myID]+mincosts[dest].
-	   
-	   if mincost[dest] == INFINITY AND cost[dest] == INFINITY this code works
-	*/
-	bool myDest        = (minRoute[dest] == RouterSimulator.INFINITY);
-	bool myToSource    = (minRoute[source] == RouterSimulator.INFINITY);
-	bool costViaSource = (mincosts[dest] == RouterSimulator.INFINITY);
+	bool myCostIsINF					= (costs[dest]		== RouterSimulator.INFINITY);
+	bool srcCostIsINF					= (mincosts[dest] == RouterSimulator.INFINITY);
+	bool minRouteIsSource			= (minRoute[dest] == source);
+
+		if ( myCostIsINF || minRouteIsSource )
+		{
+				if ( srcCostIsINF )
+				{
+					costs[dest] = RouterSimulator.INFINITY;
+					return; 
+				}
+
+				costs[dest] = mincosts[myID] + mincosts[dest]; 
+				return;
+		}
+
+		int newcost   = mincosts[dest] + costs[source];
 	
-	int newcost        = mincosts[dest] + costs[source];
-
-	if ( myDest )
-	    newcost = mincosts[myID] + mincosts[dest];
-	
-	/* source is our current next hop to dest, our costs has to be updated with source's 
-	   mincosts to dest regardless of shit 
-	*/
-	if ( source == minRoute[dest] )
-	    {
-		if ( costViaSource )
-		    {
-			cost[dest] = RouterSimulator.INFINITY;
-			minRoute[dest] = RouterSimulator.INFINITY;
-			return;
-		    }
-		else
-		    costs[dest] = mincosts[myID] + mincosts[dest];
-		
-		return;
-	    }
-
-	if ( myToSource )
-	    {
-		minRoute[source] = source;
-		costs[source] = mincosts[myID];
-		return;
-	    }
-
 	if ( costs[dest] > newcost)
 	    {
-		costs[dest] = newcost;
-		minRoute[dest] = source;
-		return;
+				costs[dest] = newcost;
+				minRoute[dest] = source;
 	    }
 	return;
-	/*	 
-	int distance = costs[dest];
-	int path;
-
-	if( distance != RouterSimulator.INFINITY )
-	    path = dest;
-	else
-	    path = RouterSimulator.INFINITY;
-
-	for( int i = 0; i < RouterSimulator.NUM_NODES; ++i )
-	    {
-		if( i == dest || i == myID )
-		    continue;
-
-		// Seems ok right now 
-		if( costs[i] != RouterSimulator.INFINITY &&
-		    distanceVector[i][dest] != RouterSimulator.INFINITY &&
-		    distance > costs[i] + distanceVector[i][dest] )
-		    {
-			distance = costs[i] + distanceVector[i][dest];
-			//System.out.println(distanceVector[i][dest]);
-			//System.out.println(minRoute[dest]);
-			path = i;
-		    }
-	    }
-	return path;
-	*/
     }
 
     private void sendDistanceVector()
