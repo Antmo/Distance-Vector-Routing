@@ -1,6 +1,6 @@
 import javax.swing.*;        
 import java.util.Arrays;
-/* F.java has some issue ... tried using the java Formatter instead. */
+/* F.java has some issue ... uried using the java Formatter instead. */
 /* But it required a lot of rework for the printing */
 /* and went with the Format in F.java anyway. */
 import java.util.Formatter; 
@@ -54,7 +54,8 @@ public class RouterNode {
 	System.arraycopy(pkt.mincost, 0, distanceVector[pkt.sourceid], 0, RouterSimulator.NUM_NODES);
 
 	/* update new min-paths in the distance vector */
-	updateDistancevector(pkt.sourceid, pkt.mincost);
+	if (updateDistancevector(pkt.sourceid, pkt.mincost) )
+		sendDistanceVector();
     }
   
 
@@ -132,8 +133,19 @@ public class RouterNode {
     //--------------------------------------------------
     public void updateLinkCost(int dest, int newcost) 
     {
-	costs[dest] = newcost;
-	updateDistancevector(myID,costs);
+
+		if ( costs[dest] > newcost )
+		{
+			costs[dest] = newcost;
+			minRoute[dest] = dest;
+			sendDistanceVector();
+		}
+		else if (minRoute[dest] == dest)
+		{
+			costs[dest] = newcost;
+			sendDistanceVector();
+		}
+		
     }
 
     /* Init DV. Set all entries to INFINITY */
@@ -146,33 +158,32 @@ public class RouterNode {
 
     /* Update distance vector for this node */
     /* (Bellman-Ford algorithm) */
-    private void updateDistancevector(int source, int[] mincosts)
+    private boolean updateDistancevector(int source, int[] mincosts)
     {
 	/* Put updated costs in a temporary distance vector */
 	int[] updatedDV = new int[RouterSimulator.NUM_NODES];
 	System.arraycopy(costs,0,updatedDV,0,RouterSimulator.NUM_NODES);
 
-	for ( int i = 0; i < RouterSimulator.NUM_NODES; ++i )
+	for ( int dest = 0; dest < RouterSimulator.NUM_NODES; ++dest )
 	    {
-		if ( i == myID || i == source)
+		if ( dest == myID || dest == source)
 		    continue;
-		find_min_path(i,source,mincosts);
+		find_min_path(dest,source,mincosts);
 	    }
 	
-	if(!Arrays.equals(updatedDV,costs))
-	    {
-		System.arraycopy(distanceVector[myID],0,updatedDV,0,RouterSimulator.NUM_NODES);
-		sendDistanceVector();
-	    }
+		System.arraycopy(updatedDV,0,distanceVector[myID],0,RouterSimulator.NUM_NODES);
+
+		return !Arrays.equals(updatedDV,costs);
     }
     
     /* Find the minimal path to dest */
     /* Returns the ID of the router to where we should send in order to reach dest */
     private void find_min_path(int dest, int source, int[] mincosts)
     {
-	bool myCostIsINF					= (costs[dest]		== RouterSimulator.INFINITY);
-	bool srcCostIsINF					= (mincosts[dest] == RouterSimulator.INFINITY);
-	bool minRouteIsSource			= (minRoute[dest] == source);
+	boolean myCostIsINF			= (costs[dest]		== RouterSimulator.INFINITY);
+	boolean srcCostIsINF		= (mincosts[dest]	== RouterSimulator.INFINITY);
+	boolean minRouteIsSource	= (minRoute[dest]	== source);
+		int newcost   = mincosts[dest] + costs[source];
 
 		if ( myCostIsINF || minRouteIsSource )
 		{
@@ -182,40 +193,46 @@ public class RouterNode {
 					return; 
 				}
 
-				costs[dest] = mincosts[myID] + mincosts[dest]; 
+				if ( newcost < RouterSimulator.INFINITY)
+				costs[dest] = newcost;
 				return;
 		}
 
-		int newcost   = mincosts[dest] + costs[source];
 	
 	if ( costs[dest] > newcost)
 	    {
-				costs[dest] = newcost;
-				minRoute[dest] = source;
+				if ( newcost < RouterSimulator.INFINITY)
+				{
+					costs[dest] = newcost;
+					minRoute[dest] = source;
+				}
 	    }
 	return;
     }
 
     private void sendDistanceVector()
     {
+	
+		
+		int[] tempDV = new int[RouterSimulator.NUM_NODES];
+
 	/* Send the distance vector to all adjacent neighbours */
 	for( int i = 0; i < RouterSimulator.NUM_NODES; ++i )
 	    {
 		/* Send to -only- adjacent neighbours */
 		if( i == myID || costs[i] == RouterSimulator.INFINITY )
 		    continue;
+			
+		System.arraycopy(costs,0,tempDV,0,RouterSimulator.NUM_NODES);
 
-		int[] tempDV = new int[RouterSimulator.NUM_NODES];
-		for( int j = 0; j < RouterSimulator.NUM_NODES; ++j )
-		    {
-			if( poisonedReverse && i == minRoute[j] )
-			    tempDV[j] = RouterSimulator.INFINITY;
-			else
-			    tempDV[j] = costs[j];
-			//System.out.println(distanceVector[myID][j]);
-			//System.out.println(costs[j]);			     
-		    }
-		
+		if(poisonedReverse)
+		{
+			for (int j = 0; j < RouterSimulator.NUM_NODES; ++j)
+			{
+				if (minRoute[j] == i )
+				tempDV[j] = RouterSimulator.INFINITY; /* this becomed mincosts[myID]  that is the cost back*/
+			}
+		}	
 		/* Send the distance vector */
 		RouterPacket pkt = new RouterPacket(myID, i, tempDV);
 		sendUpdate(pkt);
